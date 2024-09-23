@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTPMO - Attendance Monitoring System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+</head>
+
+<style>
+     body {
+            font-family: 'Inter', sans-serif; /* Set Jost font for the body */
+        }
+
+
+        .employee-card {
+        position: relative;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .status-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: transparent; /* Default state */
+    }
+
+    .status-indicator.active {
+       background-color: #00FF00;
+    }
+    .inactive-tab {
+    background-color: #E4E7EB;
+    color: black; /* Customize text color if needed */
+   
+}
+
+#schedules-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#schedules-table th, #schedules-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+#schedules-table th {
+    background-color: #f4f4f4;
+}
+
+#schedules-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#schedules-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.filter-sort-container {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-sort-container input[type="text"] {
+    flex: 1;
+    margin-right: 0.5rem;
+}
+
+.filter-sort-container button {
+    margin-left: 0.5rem;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+
+/* Ensure these styles are outside of any class like inactive-tab */
+#employee_id {
+    color: black;
+    background-color: white; /* Ensure the background is white */
+    border: 1px solid #ccc;  /* Ensure the border is visible */
+}
+
+/* Optional: Reset or override specific styles for dropdown options */
+#employee_id option {
+    color: black; /* Ensure option text is black */
+}
+
+.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background-color: white;
+    overflow: auto; /* Ensure scrollability */
+}
+/* Example styles to set fixed column widths */
+.table-fixed {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.table-fixed th, .table-fixed td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.column-1 { width: 20%; }
+.column-2 { width: 20%; }
+.column-3 { width: 20%; }
+.column-4 { width: 20%; }
+.column-5 { width: 20%; }
+
+.notification-toast {
+    position: fixed;
+    bottom: 20px; /* Adjust to position from the bottom */
+    right: 20px;  /* Adjust to position from the right */
+    max-width: 300px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between notifications */
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease; /* Smooth fade-out and slide-up effect */
+    transform: translateY(20px); /* Slide up effect */
+}
+
+.toast.success {
+    background-color: #38a169; /* Tailwind CSS green-600 */
+}
+
+.toast.error {
+    background-color: #e53e3e; /* Tailwind CSS red-600 */
+}
+
+.toast-icon {
+    margin-right: 10px; /* Space between icon and text */
+}
+
+.toast-message {
+    flex: 1;
+}
+
+.toast-close {
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+</style>
+<body class="bg-gray-100 font-sans">
+<!-- Top Panel -->
+<div class="bg-white flex justify-between items-center p-4 mb-6 border-b-2 border-black">
+
+    <img src="{{ url_for('static', filename='assets/images/logo.png') }}" alt="Stoplight" class="w-10 h-10 ml-2">
+    <div class="text-lg font-semibold">
+        LTPMO Attendance Monitoring System</span> <!-- Replace with dynamic username -->
+    </div>
+    <button id="logout-button" class="flex items-center bg-transparent text-red-600 font-semibold p-2 rounded transition duration-300 hover:bg-gray-100" onclick="logout()">
+        <i class="fas fa-sign-out-alt mr-2"></i>
+        Logout
+    </button>
+    
+</div>
+    <div class="container mx-auto mt-10 flex">
+        <div class="w-1/4 bg-white shadow-md rounded-lg p-4">
+            <h2 class="text-xl font-bold text-center mb-6">Menu</h2>
+            <div class="flex flex-col space-y-2">
+                <button id="tab-mark-attendance" class="tab-button flex items-center p-3 bg-green-600 text-white rounded-lg shadow-md hover:bg-gray-400 focus:outline-none transition duration-300">
+                    <i class="fas fa-qrcode mr-2"></i> Mark Attendance
+                </button>
+                <button id="tab-add-employee" class="tab-button flex items-center p-3 bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-400 focus:outline-none transition duration-300">
+                    <i class="fas fa-user-plus mr-2"></i> Add Personnel
+                </button>
+
+                <button id="tab-edit-employee" class="tab-button flex items-center p-3 bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-400 focus:outline-none transition duration-300">
+                    <i class="fas fa-user-edit mr-2"></i> Edit Personnel
+                </button>
+                
+                <button id="tab-view-records" class="tab-button flex items-center p-3 bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-400 focus:outline-none transition duration-300">
+                    <i class="fas fa-list-alt mr-2"></i> View Records
+                </button>
+                <button id="tab-real-time-dashboard" class="tab-button flex items-center p-3 bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-400 focus:outline-none transition duration-300">
+                    <i class="fas fa-chart-line mr-2"></i> Dashboard
+                </button>
+                <button id="tab-create-task" class="tab-button flex items-center p-3 bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-400 focus:outline-none transition duration-300">
+                    <i class="fas fa-tasks mr-2"></i> VIP Escort
+                </button>                
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="w-3/4 ml-4">
+         
+            <div id="mark-attendance-tab" class="tab-content mb-8 p-6 bg-white rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-4">Scan QR Code</h2>
+                <input type="password" id="qr-input" placeholder="Scan QR Code Here" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500" autofocus>
+                <button id="mark-attendance" class="mt-4 w-full bg-green-600 text-white font-semibold p-2 rounded-md hover:bg-green-700 transition duration-300">Mark Attendance</button>
+            
+                <div id="time-out-option" class="mt-4 hidden">
+                    <label for="custom-time-out" class="block mb-2">Set Custom Time Out:</label>
+                    <input type="time" id="custom-time-out" class="border border-gray-300 p-2 rounded-md">
+                </div>
+            
+                <div id="scan-result" class="mt-2 text-green-600 hidden"></div>
+            </div>
+            <!-- Add Employee Tab -->
+            <div id="add-employee-tab" class="tab-content hidden mb-8 p-6 bg-white rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-4">Add New Personnel</h2>
+                <form id="add-employee-form">
+                    <input type="file" name="id_picture" accept="image/*" class="w-full p-2 border border-gray-300 rounded-md mb-2" required>
+
+                    <input type="text" name="first_name" placeholder="First Name" class="w-full p-2 border border-gray-300 rounded-md mb-2" required>
+                    <input type="text" name="last_name" placeholder="Last Name" class="w-full p-2 border border-gray-300 rounded-md mb-2" required>
+                    <input type="text" name="designation" placeholder="Designation" class="w-full p-2 border border-gray-300 rounded-md mb-2" required>
+                    <select id="edit-deployment-area" name="deployment_area" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Select Area</option>
+                        <option value="Daang Hari">DAANG HARI</option>
+                        <option value="Concha Cruz">CONCHA CRUZ</option>
+                        <option value="TS Cruz">TS CRUZ</option>
+                        <option value="BF Almanza">BF ALMANZA</option>
+                        <option value="Pilar">PILAR</option>
+                        <option value="San Francisco/Almanza">SAN FRANCISCO/ALMANZA</option>
+                        <option value="SM Tower">SM TOWER</option>
+                        <option value="Metrocor">METROCOR</option>
+                        <option value="SM/Exit">SM/EXIT</option>
+                        <option value="Golden Gate">GOLDEN GATE</option>
+                        <option value="Moonwalk">MOONWALK</option>
+                        <option value="Equitable">EQUITABLE</option>
+                        <option value="Marcos Alvarez">MARCOS ALVAREZ</option>
+                        <option value="Puregold Exit">PUREGOLD EXIT</option>
+                        <option value="Village Square">VILLAGE SQUARE</option>
+                        <option value="Southland">SOUTHLAND</option>
+                        <option value="PMMS">PMMS</option>
+                        <option value="Angela">ANGELA</option>
+                        <option value="Admiral">ADMIRAL</option>
+                        <option value="Robinson's Exit">ROBINSON’S EXIT</option>
+                        <option value="Robinson's Entrance">ROBINSON’S ENTRANCE</option>
+                        <option value="LTO">LTO</option>
+                        <option value="Casimiro Intersection">CASIMIRO INTERSECTION</option>
+                        <option value="Southville">SOUTHVILLE</option>
+                        <option value="Balikatan">BALIKATAN</option>
+                        <option value="Naga Rd./CAA">NAGA RD./CAA</option>
+                        <option value="Canaynay Ave.">CANAYNAY AVE.</option>
+                        <option value="Rainbow Vill/Hukay">RAINBOW VILL/HUKAY</option>
+                        <option value="URCI">URCI</option>
+                        <option value="SM Hypermarket">SM HYPERMARKET</option>
+                        <option value="Uniwide">UNIWIDE</option>
+                        <option value="Times">TIMES</option>
+                        <option value="F. Ocampo">F. OCAMPO</option>
+                        <option value="Cityhall Entrance">CITYHALL ENTRANCE</option>
+                        <option value="Cityhall Exit">CITYHALL EXIT</option>
+                        <option value="Cityhall Pedestrian Lane">CITYHALL PEDESTRIAN LANE</option>
+                        <option value="SM Center">SM CENTER</option>
+                        <option value="PS Bank">PS BANK</option>
+                        <option value="Verdant">VERDANT</option>
+                        <option value="Philam">PHILAM</option>
+                        <option value="China Bank">CHINA BANK</option>
+                        <option value="McDo Pamplona">MCDO PAMPLONA</option>
+                        <option value="Patricia">PATRICIA</option>
+                        <option value="Manuela">MANUELA</option>
+                        <option value="Rosal">ROSAL</option>
+                        <option value="Greenview">GREENVIEW</option>
+                        <option value="Christ the King">CHRIST THE KING</option>
+                        <option value="San Isidro">SAN ISIDRO</option>
+                        <option value="Tuazon">TUAZON</option>
+                        <option value="Zapote Tramo">ZAPOTE TRAMO</option>
+                        <option value="Zapote Junction">ZAPOTE JUNCTION</option>
+                        <option value="DMCI">DMCI</option>
+                        <option value="Perpetual Village">PERPETUAL VILLAGE</option>
+                        <option value="District">DISTRICT</option>
+                        <option value="Pulanlupa">PULANLUPA</option>
+                        <option value="C-5">C-5</option>
+                        <option value="LPC Bayan">LPC BAYAN</option>
+                        <option value="Del Nor">DEL NOR</option>
+                        <option value="Annex">ANNEX</option>
+                    </select>
+                    <select id="unit_type" name="unit_type" class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:outline-none focus:ring focus:ring-blue-500 bg-white text-gray-700 appearance-none mb-2">
+                        <option value="" class="text-gray-400">Select Unit Type</option>
+                        <option value="Fixed Post">Fixed Post</option>
+                        <option value="Motorcycle Unit">Motorcycle Unit</option>
+                    </select>
+
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold p-2 rounded-md hover:bg-blue-700 transition duration-300">Add Personnel</button>
+                </form>
+                <div id="add-employee-result" class="mt-2 text-blue-600 hidden"></div>
+            </div>
+        <!-- Modal -->
+        <div id="success-modal" class="fixed inset-0 bg-gray-800 bg-opacity-70 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-4 max-w-sm mx-auto flex flex-col items-center">
+                <img src="{{ url_for('static', filename='assets/images/congrats.gif') }}" alt="Congratulations" class="w-60 mb-2">
+                <h3 class="text-lg font-semibold text-center">Congratulations!</h3>
+                <p class="mt-2 text-center">Personnel has been added successfully!</p>
+                <div id="employee-info" class="mt-4 text-left w-full">
+                    <!-- Added employee info will be displayed here -->
+                </div>
+                <div id="qr-code-display-modal" class="mt-4 text-center">
+                    <h4 class="text-md font-semibold">Generated QR Code:</h4>
+                    <img id="qr-code-modal" src="" alt="QR Code" class="mt-2 w-32 mx-auto">
+                </div>
+                <button id="close-modal" class="mt-4 w-full bg-blue-600 text-white font-semibold p-2 rounded-md hover:bg-blue-700 transition duration-300">Close</button>
+            </div>
+        </div>
+        <!-- View Records Tab -->
+        <div id="view-records-tab" class="tab-content hidden mb-8 p-6 bg-white rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Attendance Log</h2>
+            <div class="flex mb-4">
+                <select id="employee-dropdown" class="p-2 border border-gray-300 rounded-md mr-2">
+                    <option value="">Select Personnel</option>
+                    <!-- Employee names will be populated here -->
+                </select>
+                <input type="date" id="filter-date-from" class="p-2 border border-gray-300 rounded-md mr-2"> _ _
+                <input type="date" id="filter-date-until" class="p-2 border border-gray-300 rounded-md mr-2">
+                <button id="filter-btn" class="bg-blue-600 text-white p-2 rounded-md">Filter</button>
+                <button id="export-btn" class="bg-green-600 text-white p-2 rounded-md ml-2">Export</button>
+            </div>
+            <table class="min-w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="py-2 px-4 text-left">Name</th>
+                        <th class="py-2 px-4 text-left">Designation</th>
+                        <th class="py-2 px-4 text-left">Status</th>
+                        <th class="py-2 px-4 text-left">Time In</th>
+                        <th class="py-2 px-4 text-left">Time Out</th>
+                    </tr>
+                </thead>
+                <tbody id="records-table-body">
+                    <!-- Attendance records will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+   <!-- Edit Employee Tab -->
+        <div id="edit-employee-tab" class="tab-content hidden mb-8 p-6 bg-white rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Edit Employee Information</h2>
+            <form id="edit-employee-form">
+                <div class="mb-4">
+                    <label for="employee-search" class="block text-sm font-medium text-gray-700">Search Employee:</label>
+                    <input type="text" id="employee-search" name="employee-search" placeholder="Search by name or ID" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div id="employee-details" class="hidden">
+                    <!-- Employee details fields will be populated here -->
+                    <input type="hidden" id="edit-employee-id" name="employee_id">
+
+                    <div class="mb-4">
+                        <label for="edit-first-name" class="block text-sm font-medium text-gray-700">First Name:</label>
+                        <input type="text" id="edit-first-name" name="first_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="edit-last-name" class="block text-sm font-medium text-gray-700">Last Name:</label>
+                        <input type="text" id="edit-last-name" name="last_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="edit-designation" class="block text-sm font-medium text-gray-700">Designation:</label>
+                        <input type="text" id="edit-designation" name="designation" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="edit-deployment-area" class="block text-sm font-medium text-gray-700">Deployment Area:</label>
+                        <select id="edit-deployment-area" name="deployment_area" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="">Select Area</option>
+                            <option value="Daang Hari">DAANG HARI</option>
+                            <option value="Concha Cruz">CONCHA CRUZ</option>
+                            <option value="TS Cruz">TS CRUZ</option>
+                            <option value="BF Almanza">BF ALMANZA</option>
+                            <option value="Pilar">PILAR</option>
+                            <option value="San Francisco/Almanza">SAN FRANCISCO/ALMANZA</option>
+                            <option value="SM Tower">SM TOWER</option>
+                            <option value="Metrocor">METROCOR</option>
+                            <option value="SM/Exit">SM/EXIT</option>
+                            <option value="Golden Gate">GOLDEN GATE</option>
+                            <option value="Moonwalk">MOONWALK</option>
+                            <option value="Equitable">EQUITABLE</option>
+                            <option value="Marcos Alvarez">MARCOS ALVAREZ</option>
+                            <option value="Puregold Exit">PUREGOLD EXIT</option>
+                            <option value="Village Square">VILLAGE SQUARE</option>
+                            <option value="Southland">SOUTHLAND</option>
+                            <option value="PMMS">PMMS</option>
+                            <option value="Angela">ANGELA</option>
+                            <option value="Admiral">ADMIRAL</option>
+                            <option value="Robinson's Exit">ROBINSON’S EXIT</option>
+                            <option value="Robinson's Entrance">ROBINSON’S ENTRANCE</option>
+                            <option value="LTO">LTO</option>
+                            <option value="Casimiro Intersection">CASIMIRO INTERSECTION</option>
+                            <option value="Southville">SOUTHVILLE</option>
+                            <option value="Balikatan">BALIKATAN</option>
+                            <option value="Naga Rd./CAA">NAGA RD./CAA</option>
+                            <option value="Canaynay Ave.">CANAYNAY AVE.</option>
+                            <option value="Rainbow Vill/Hukay">RAINBOW VILL/HUKAY</option>
+                            <option value="URCI">URCI</option>
+                            <option value="SM Hypermarket">SM HYPERMARKET</option>
+                            <option value="Uniwide">UNIWIDE</option>
+                            <option value="Times">TIMES</option>
+                            <option value="F. Ocampo">F. OCAMPO</option>
+                            <option value="Cityhall Entrance">CITYHALL ENTRANCE</option>
+                            <option value="Cityhall Exit">CITYHALL EXIT</option>
+                            <option value="Cityhall Pedestrian Lane">CITYHALL PEDESTRIAN LANE</option>
+                            <option value="SM Center">SM CENTER</option>
+                            <option value="PS Bank">PS BANK</option>
+                            <option value="Verdant">VERDANT</option>
+                            <option value="Philam">PHILAM</option>
+                            <option value="China Bank">CHINA BANK</option>
+                            <option value="McDo Pamplona">MCDO PAMPLONA</option>
+                            <option value="Patricia">PATRICIA</option>
+                            <option value="Manuela">MANUELA</option>
+                            <option value="Rosal">ROSAL</option>
+                            <option value="Greenview">GREENVIEW</option>
+                            <option value="Christ the King">CHRIST THE KING</option>
+                            <option value="San Isidro">SAN ISIDRO</option>
+                            <option value="Tuazon">TUAZON</option>
+                            <option value="Zapote Tramo">ZAPOTE TRAMO</option>
+                            <option value="Zapote Junction">ZAPOTE JUNCTION</option>
+                            <option value="DMCI">DMCI</option>
+                            <option value="Perpetual Village">PERPETUAL VILLAGE</option>
+                            <option value="District">DISTRICT</option>
+                            <option value="Pulanlupa">PULANLUPA</option>
+                            <option value="C-5">C-5</option>
+                            <option value="LPC Bayan">LPC BAYAN</option>
+                            <option value="Del Nor">DEL NOR</option>
+                            <option value="Annex">ANNEX</option>
+                        </select>
+                    </div>
+                    
+                    
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold p-2 rounded-md hover:bg-blue-700 transition duration-300">Save Changes</button>
+                </div>
+            </form>
+            <div id="edit-employee-result" class="mt-2 text-blue-600 hidden"></div>
+        </div>
+            <script src="{{ url_for('static', filename='scripts/search.js') }}"></script>
+        
+<!-- Real-time Dashboard Tab -->
+<div id="real-time-dashboard-tab" class="tab-content hidden p-4 bg-white rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">Real-time Dashboard</h2>
+
+    <!-- Fullscreen Button -->
+    <button id="fullscreen-toggle" class="flex items-center bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition duration-300 mb-4">
+        <i id="fullscreen-icon" class="fas fa-expand"></i>
+    </button>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div class="bg-blue-500 text-white p-3 rounded-lg shadow-md">
+            <h3 class="text-sm font-bold">Total Personnel</h3>
+            <p id="total-employees" class="text-xl font-semibold">0</p>
+        </div>
+        <div class="bg-green-500 text-white p-3 rounded-lg shadow-md">
+            <h3 class="text-sm font-bold">Active Personnel</h3>
+            <p id="total-present" class="text-xl font-semibold">0</p>
+        </div>
+        <div class="bg-red-500 text-white p-3 rounded-lg shadow-md">
+            <h3 class="text-sm font-bold">Absent Personnel</h3>
+            <p id="total-absent" class="text-xl font-semibold">0</p>
+        </div>
+    </div>
+
+    <!-- Filters and Toggle Button -->
+    <div class="flex flex-wrap gap-4 mb-4">
+        <!-- Status Filter -->
+        <div class="flex items-center">
+            <label for="status-filter" class="mr-2 text-sm font-medium">Status:</label>
+            <select id="status-filter" class="p-2 border border-gray-300 rounded-md text-sm">
+                <option value="">All</option>
+                <option value="Absent">Absent</option>
+                <option value="Active">Active</option>
+            </select>
+        </div>
+        
+        <!-- Unit Type Filter -->
+        <div class="flex items-center">
+            <label for="unit-type-filter" class="mr-2 text-sm font-medium">Unit Type:</label>
+            <select id="unit-type-filter" class="p-2 border border-gray-300 rounded-md text-sm">
+                <option value="">All</option>
+                <option value="Motorcycle Unit">Motorcycle Unit</option>
+                <option value="Fixed Post">Fixed Post</option>
+                <option value="VIP Escort">VIP Escort</option>
+            </select>
+        </div>
+        
+        <!-- Deployment Area Filter -->
+        <div class="flex items-center">
+            <label for="deployment-area-filter" class="mr-2 text-sm font-medium">Deployment Area:</label>
+            <select id="deployment-area-filter" class="p-2 border border-gray-300 rounded-md text-sm">
+                <option value="">All</option>
+                <!-- Populate this dropdown with deployment areas from your data -->
+            </select>
+        </div>
+    </div>
+
+    <button id="toggle-grid" class="ml-auto flex items-center bg-gray-300 text-gray-800 p-2 rounded-md hover:bg-gray-400 transition duration-300 mb-2">
+        <span id="toggle-icon" class="mr-2">
+            <i class="fas fa-th"></i> <!-- Default to grid icon -->
+        </span>
+        <span id="toggle-text">Switch to Grid Mode</span>
+    </button>
+
+    <!-- Search Input -->
+    <div class="mb-4">
+        <input id="search-input" type="text" placeholder="Search by name or designation" class="p-2 border border-gray-300 rounded-md w-full text-sm" />
+
+            <!-- Employee Table -->
+    <table id="employee-table" class="min-w-full table-fixed border-collapse bg-gray-50 mt-2">
+        <thead>
+            <tr class="bg-gray-200 text-sm">
+                <th class="w-1/6 py-2 px-4 text-left">First Name</th>
+                <th class="w-1/6 py-2 px-4 text-left">Last Name</th>
+                <th class="w-1/6 py-2 px-4 text-left">Designation</th>
+                <th class="w-1/6 py-2 px-4 text-left">Deployment Area</th>
+                <th class="w-1/6 py-2 px-4 text-left">Unit Type</th>
+                <th class="w-1/6 py-2 px-4 text-left">Status</th>
+                <th class="w-1/6 py-2 px-4 text-left">ID Picture</th>
+            </tr>
+        </thead>
+            <tbody id="employee-list">
+                <!-- Employee records will be appended here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Employee Grid -->
+    <div id="employee-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+        <!-- Employee cards will be appended here -->
+    </div>
+</div>
+
+<!-- Create Task Tab -->
+<div id="create-task-tab" class="tab-content hidden mb-8 p-6 bg-white rounded-lg shadow-md">
+    <h2 class="text-2xl font-semibold mb-6">Assign Task to Personnels</h2>
+    <form id="create-task-form" action="{{ url_for('create_task') }}" method="post" class="space-y-6">
+        <!-- Task Name -->
+        <div>
+            <label for="task_name" class="block text-sm font-medium text-gray-700">Task Name:</label>
+            <select id="task_name" name="task_name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                <option value="VIP Escort">VIP Escort</option>
+            </select>
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">Description:</label>
+            <textarea id="description" name="description" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+        </div>
+
+        <!-- Employee Search -->
+        <div>
+            <label for="employee_search" class="block text-sm font-medium text-gray-700">Assign to Personnel:</label>
+            <input type="text" id="employee_search" name="employee_search" placeholder="Search for an employee" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            <input type="hidden" id="employee_id" name="employee_id">
+        </div>
+
+        <!-- Schedule -->
+        <div>
+            <label for="start_schedule" class="block text-sm font-medium text-gray-700">Start Schedule:</label>
+            <input type="datetime-local" id="start_schedule" name="start_schedule" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        </div>
+
+        <div>
+            <label for="end_schedule" class="block text-sm font-medium text-gray-700">End Schedule:</label>
+            <input type="datetime-local" id="end_schedule" name="end_schedule" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Assign Task</button>
+
+ 
+    
+    </form>
+    <br>
+    <h3 class="text-xl font-semibold mb-4">VIP Escort Logs</h3>
+    <div class="filter-sort-container mb-4 mt-4 flex flex-col space-y-4">
+        <!-- Search and Clear -->
+        <div class="flex items-center space-x-2">
+         
+        </div>
+    
+        <!-- Filter Dropdowns -->
+        <div class="flex space-x-4">
+            <select id="designation-filter" class="hidden">
+                <option value="">Select Designation</option>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+            
+            <select id="deployment-area-filter" class="hidden">
+                <option value="">Select Deployment Area</option>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+            
+            <input type="date" id="date-filter" class="hidden">
+        </div>
+    
+        <!-- Sort Buttons -->
+        <div class="flex space-x-2">
+            <input type="text" id="search-task" placeholder="Search by Name" class="p-2 border border-gray-300 rounded-md w-full">
+            <button id="clear-search" class="p-2 bg-gray-300 text-black rounded-md hover:bg-gray-400">Clear Search</button>
+            <button id="sort-task" class="hidden">Sort by Task</button>
+            <button id="sort-date" class="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Sort by Date</button>
+        </div>
+    </div>
+    
+    <table id="schedules-table" class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+        <thead class="bg-gray-100 border-b border-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Task</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Description</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Assigned To</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Unit Type</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Deployment Area</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Designation</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Start</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">End</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Status</th>
+            </tr>
+        </thead>
+        <tbody id="schedules-body" class="divide-y divide-gray-200 text-xs">
+            <!-- Rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+    
+    
+</div>
+</div>
+<div id="notification-container" class="notification-toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+<script>
+    // Connect to the Socket.IO server
+    const socket = io();
+
+    // Listen for 'notification' events
+    socket.on('notification', function(data) {
+        const message = data.message;
+        const notificationContainer = document.getElementById('notification-container');
+
+        // Create a new notification element
+        const notification = document.createElement('div');
+        notification.className = 'toast success'; // or 'error' based on the type
+        notification.textContent = message;
+
+        // Append the notification to the container
+        notificationContainer.appendChild(notification);
+
+        // Show the notification
+        notification.style.display = 'block';
+        notification.style.opacity = 1;
+
+        // Hide the notification after 3 seconds
+        setTimeout(() => {
+            notification.style.opacity = 0;
+            setTimeout(() => notification.remove(), 500); // Remove after fade-out
+        }, 3000);
+    });
+</script>
+    <script src="{{ url_for('static', filename='scripts/attendance.js') }}"></script>
+    <script>
+        // Ensure userRole is available as a variable from the server-side
+        var userRole = '{{ user_role }}';
+    
+        function setButtonState() {
+            var button = document.getElementById('tab-add-employee');
+    
+            if (userRole === 'admin') {
+                button.classList.remove('inactive-tab');
+                button.disabled = false;
+            } else {
+                button.classList.add('inactive-tab');
+                button.disabled = true;
+                button.style.display = 'none';
+            }
+        }
+        // Call the function to set the button state based on the user's role
+        setButtonState();
+    </script>
+    <script>
+$(function() {
+    $("#employee_search").autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "/search_employees",
+                dataType: "json",
+                data: {
+                    query: request.term,
+                    unit_type: "Motorcycle Unit",
+                    status: "active"
+                },
+                success: function(data) {
+                    response(data.map(employee => ({
+                        label: employee.label || `${employee.first_name} ${employee.last_name}`,
+                        value: employee.value || employee.id
+                    })));
+                }
+            });
+        },
+        select: function(event, ui) {
+            if (ui.item.value) {
+                $("#employee_id").val(ui.item.value);
+                $("#employee_search").val(ui.item.label);
+            } else {
+                $("#employee_id").val('');
+                $("#employee_search").val('');
+            }
+            return false;
+        }
+    });
+});
+
+    </script>
+
+
+</body>
+</html>

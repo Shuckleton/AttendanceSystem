@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Sign Up</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400&display=swap" rel="stylesheet"> <!-- Add Jost font -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Jost', sans-serif; /* Set Jost font for the body */
+            overflow: hidden; /* Prevent scrolling of the entire page */
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .tab-button {
+            position: relative;
+        }
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #16a34a; /* Tailwind green-600 */
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #3c763d;
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+        }
+        .alert-error {
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+    </style>
+    <script>
+        function showTab(tabName) {
+            const tabs = ['signup', 'login'];
+            const alertContainer = document.getElementById('flash-messages');
+
+            tabs.forEach(tab => {
+                const tabElement = document.getElementById(tab);
+                const tabButton = document.getElementById(tab + '-tab');
+                if (tab === tabName) {
+                    tabElement.classList.add('active');
+                    tabButton.classList.add('active');
+                } else {
+                    tabElement.classList.remove('active');
+                    tabButton.classList.remove('active');
+                }
+            });
+
+            // Hide flash messages when switching tabs
+            if (alertContainer) {
+                alertContainer.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            showTab('login'); // Show login tab by default
+
+            // Check if there are flash messages and display them
+            const alertContainer = document.getElementById('flash-messages');
+            if (alertContainer && alertContainer.children.length > 0) {
+                alertContainer.style.display = 'block';
+            } else {
+                alertContainer.style.display = 'none';
+            }
+        });
+    </script>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen" style="background-image: url('{{ url_for('static', filename='assets/images/bg3.png') }}'); background-size: cover; background-position: center;">
+
+    <div class="bg-white bg-opacity-80 flex max-w-4xl w-full rounded-lg" style="height: 600px;">
+
+        <div class="flex-1 flex items-center justify-center p-4 w-full max-w-md mx-auto ml-10">
+            <div class="flex flex-col items-center space-y-1 -mt-20">
+                <img src="{{ url_for('static', filename='assets/images/logo.png') }}" alt="Stoplight" class="w-24 h-24 mb-2">
+                <h1 class="text-[40px] md:text-[36px] lg:text-[40px] font-normal leading-[45px] text-black-600 text-center">Traffic and Parking Management Office</h1>
+                <h2 class="font-Inter text-lg font-normal leading-6 text-black-600 text-center">Attendance Monitoring System</h2>
+            </div>
+        </div>
+        
+        <div class="p-4 shadow-lg max-w-md w-full h-full mr-3"> 
+            <div class="flex mb-4">
+                <button id="login-tab" onclick="showTab('login')" class="tab-button w-1/2 py-2 font-semibold rounded-l-md transition-colors duration-300">Enter System</button>
+                <button id="signup-tab" onclick="showTab('signup')" class="tab-button w-1/2 py-2 font-semibold rounded-r-md transition-colors duration-300">Create Account</button>
+            </div>
+            
+            <div id="login" class="tab-content active">
+                <form action="/login" method="POST" class="space-y-2">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" name="email" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="password" name="password" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-5">
+                    </div>
+                    <button type="submit" class="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-md shadow-md transition-colors duration-300 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Log In</button>
+                </form>
+            </div>
+            
+            <div id="signup" class="tab-content">
+                <form action="/signup" method="POST" class="space-y-2">
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                            <input type="text" id="first_name" name="first_name" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="flex-1">
+                            <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="dob" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                        <input type="date" id="dob" name="dob" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" id="username" name="username" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" name="email" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="password" name="password" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="confirm_password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-5">
+                    </div>
+                    <button type="submit" class="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-md shadow-md transition-colors duration-300 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Sign Up</button>
+                </form>
+            </div>
+            
+            <!-- Flash messages -->
+            <div id="flash-messages" style="display: none;">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div>
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>
